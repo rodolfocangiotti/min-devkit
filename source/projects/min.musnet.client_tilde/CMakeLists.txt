@@ -18,7 +18,26 @@ include_directories(
 
 
 set( SOURCE_FILES
-	${PROJECT_NAME}.cpp
+    ${PROJECT_NAME}.cpp
+    Payload.cpp
+    Payload.h
+    StreamManager.cpp
+    StreamManager.h
+    StreamQueue.cpp
+    StreamQueue.h
+    StreamVector.cpp
+    StreamVector.h
+    TCPConnection.cpp
+    TCPConnection.h
+    TCPSegment.cpp
+    TCPSegment.h
+    UDPConnection.cpp
+    UDPConnection.h
+    UDPDatagram.cpp
+    UDPDatagram.h
+    commons.h
+    prettyprint.h
+    types.h
 )
 
 
