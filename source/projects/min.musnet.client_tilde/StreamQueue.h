@@ -12,12 +12,17 @@ class StreamQueue {
 public:
   StreamQueue();
   ~StreamQueue();
-  void insertVector(ClientToken t, ClientTID wtid, AudioVector& v);
-  AudioVector retrieveVector(ClientToken t);
+//  void insertVector(ClientToken t, ClientTID wtid, AudioVector& v);
+    void insertVector(ClientToken t, StreamVector sv);
+  AudioVector retrieveVector(ClientToken t, bool readAlways = false);
+    int retrieveVector(StreamVector& res);
+    void setMaxLength(int elems);
 private:
-  bool myReadQueue;
+  bool myCanReadQueue;
   std::mutex myMutex;
   std::list<StreamVector> myQueue;
+  std::list<ClientTID> myHisto;
+  int myMaxLen;
 };
 
 #endif

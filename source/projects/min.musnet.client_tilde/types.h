@@ -7,7 +7,7 @@
 //typedef double AudioSample;
 //typedef float AudioSample;
 typedef int16_t AudioSample;
-typedef std::vector<AudioSample> AudioVector;
+//typedef std::vector<AudioSample> AudioVector;
 typedef uint8_t Byte;
 typedef std::vector<Byte> Buffer;
 

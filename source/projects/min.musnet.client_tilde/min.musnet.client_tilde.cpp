@@ -1,4 +1,5 @@
 #include "c74_min.h"
+#include "StreamManager.h"
 
 using namespace c74::min;
 
@@ -108,7 +109,10 @@ public:
         "Negotiate connection to MuSNet server",
         MIN_FUNCTION {
             _is_connected = true;
-            this->_connect();
+            if (this->_connect()) {
+                // Connection attemp failed...
+                _is_connected = false;
+            }
             return {};
         }
     };
@@ -118,8 +122,9 @@ public:
         "disconnect",
         "Notify disconnection to MuSNet server",
         MIN_FUNCTION {
-            this->_disconnect();
-            _is_connected = false;
+            if (!(this->_disconnect())) {
+                _is_connected = false;
+            }
             return {};
         }
     };
@@ -133,25 +138,71 @@ public:
         }
     };
 
-    void _connect() {
-        // TODO
+    MuSNetClient():
+        _manager() {
+        // Main class constructor...
+    }
+    
+    ~MuSNetClient() {
+        // Main class destructor...
+        _manager.disconnect();
     }
 
-    void _disconnect() {
-        // TODO
+    int _connect() {
+        _manager.setIPAddress(server_ip.get());
+        return _manager.connect();
+    }
+
+    int _disconnect() {
+        return _manager.disconnect();
     }
 
     void operator() (audio_bundle input, audio_bundle output) {
-        for (uint8_t chan_index {0}; chan_index < input.channel_count(); chan_index++) {
-            auto* input_channel = input.samples(chan_index);
-            auto* output_channel = output.samples(chan_index);
-            for (uint64_t sample_index {0}; sample_index < input.frame_count(); sample_index++) {
-                output_channel[sample_index] = input_channel[sample_index] * -1.0;
+        auto* left_input = input.samples(0);
+        auto* right_input = input.samples(1);
+        auto* left_output = output.samples(0);
+        auto* right_output = output.samples(1);
+
+        if (_is_connected) {
+            _manager.setMaxLatency(64); // TODO
+            // Allocate a buffer to send and receive data...
+            AudioVector musnet_buffer(AUDIO_VECTOR_SIZE * NUM_CHANNELS, 0);
+            uint64_t sample_amount = input.frame_count();
+            uint64_t packet_amount = sample_amount / AUDIO_VECTOR_SIZE;
+            uint64_t packet_size = AUDIO_VECTOR_SIZE;
+            for (uint64_t packet_index {0}; packet_index < packet_amount; packet_index++) {
+                for (uint64_t packet_sample_index {0}; packet_sample_index < packet_size; packet_sample_index++) {
+                    uint64_t sample_index = packet_index * packet_size + packet_sample_index;
+                    // Buffer is interleaved...
+                    musnet_buffer[packet_sample_index * 2] = static_cast<AudioSample>(
+                        floor(left_input[sample_index] * MAX_INT16)
+                    );
+                    musnet_buffer[packet_sample_index * 2 + 1] = static_cast<AudioSample>(
+                        floor(right_input[sample_index] * MAX_INT16)
+                    );
+                }
+                // Send buffer to server...
+                _manager.sendStream(musnet_buffer);
+            }
+            for (uint64_t packet_index {0}; packet_index < packet_amount; packet_index++) {
+                // Request a audio stream from other connected clients...
+                musnet_buffer = _manager.retrieveStream();
+                for (uint64_t packet_sample_index {0}; packet_sample_index < packet_size; packet_sample_index++) {
+                    uint64_t sample_index = packet_index * packet_size + packet_sample_index;
+                    left_output[sample_index] = musnet_buffer[packet_sample_index * 2] / static_cast<double>(MAX_INT16);
+                    right_output[sample_index] = musnet_buffer[packet_sample_index * 2 + 1] / static_cast<double>(MAX_INT16);
+                }
+            }
+        } else {
+            // Clean output...
+            for (uint64_t sample_index {0}; sample_index < output.frame_count(); sample_index++) {
+                left_output[sample_index] = 0.0;
+                right_output[sample_index] = 0.0;
             }
         }
-
     }
 private:
+    StreamManager _manager;
     bool _is_connected;
 };
 

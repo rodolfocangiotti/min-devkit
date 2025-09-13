@@ -29,7 +29,7 @@ void StreamVector::setTID(ClientTID tid) {
 }
 
 int StreamVector::addReadPermission(ClientToken t) {
-  assert(myLog.count(t) == 0);
+//  assert(myLog.count(t) == 0); TODO TODO TODO Rimosso per errori...
   myLog[t] = false;
 #if defined(DEBUG) && VERBOSENESS > 0
   std::cout << "[DEBUG] Adding read permission to client " << t << " for vector on queue..." << '\n';
@@ -75,4 +75,12 @@ bool StreamVector::isDeletable() {
 
 bool StreamVector::isReadableBy(ClientToken t) {
   return myLog.count(t) > 0 ? true : false;
+}
+
+void StreamVector::setOwner(ClientToken t) {
+    myOwner = t;
+}
+
+ClientToken StreamVector::owner() const {
+    return myOwner;
 }

@@ -2,6 +2,7 @@
 #define UDP_DATAGRAM_H
 
 #include <cstdint>
+#include "AudioVector.h"
 #include "Payload.h"
 #include "commons.h"
 #include "types.h"

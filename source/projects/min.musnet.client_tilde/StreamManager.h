@@ -14,6 +14,7 @@ public:
   int setIPAddress(const std::string& ip);
   int connect();
   int disconnect();
+  void setMaxLatency(int blocks);
   void sendStream(AudioVector& v);
   AudioVector retrieveStream();
 private:
@@ -22,9 +23,11 @@ private:
   ClientTID myReqstTID;
   ClientTID myRespTID;
   ClientToken myToken;
-  StreamQueue myQueue;
+  StreamQueue myInQueue;
+  StreamQueue myOutQueue;
   TCPConnection myTCPServ;
   UDPConnection myUDPServ;
+  int redundancy = REDUNDANCY;
 };
 
 #endif

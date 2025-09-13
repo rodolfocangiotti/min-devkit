@@ -19,6 +19,8 @@ include_directories(
 
 set( SOURCE_FILES
     ${PROJECT_NAME}.cpp
+    AudioVector.cpp
+    AudioVector.h
     Payload.cpp
     Payload.h
     StreamManager.cpp

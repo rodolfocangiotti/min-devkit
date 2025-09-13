@@ -9,9 +9,10 @@ StreamManager::StreamManager():
   connected(false),
   myToken(0),
   myReqstTID(0), myRespTID(0),
-  myQueue(),
+    myInQueue(),
+  myOutQueue(),
   myTCPServ(),
-  myUDPServ(myQueue) {
+  myUDPServ(myInQueue, myOutQueue) {
   std::cout << "Constructing StreamManager class..." << '\n';
 }
 
@@ -62,16 +63,29 @@ int StreamManager::disconnect() {
 
 void StreamManager::sendStream(AudioVector& v) {
   if (connected) {
+      StreamVector sv;
     ClientTID reqstTID = ++myReqstTID;
-    myUDPServ.sendStream(myToken, reqstTID, v);
+      for (int i = 0; i < redundancy; i++) {
+//        myUDPServ.sendStream(myToken, reqstTID, v);
+          sv.setTID(reqstTID);
+          sv.setAudioVector(v);
+          sv.addReadPermission(myToken);
+          sv.setOwner(myToken);
+          myInQueue.insertVector(myToken, sv);
+      }
   }
 }
 
 AudioVector StreamManager::retrieveStream() {
   if (connected) {
     ClientTID respTID = ++myRespTID;  // TODO
-    return myQueue.retrieveVector(myToken);
+    return myOutQueue.retrieveVector(myToken);
   } else {
     return AudioVector(AUDIO_VECTOR_SIZE * NUM_CHANNELS, 0.0);
   }
+}
+
+void StreamManager::setMaxLatency(int blocks) {
+    myInQueue.setMaxLength(blocks);
+    myOutQueue.setMaxLength(blocks);
 }

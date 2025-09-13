@@ -2,6 +2,7 @@
 #define STREAM_VECTOR_H
 
 #include <map>
+#include "AudioVector.h"
 #include "types.h"
 
 class StreamVector {
@@ -10,9 +11,11 @@ public:
   ~StreamVector();
   // ********************
   ClientTID tid() const;
+    ClientToken owner() const;
   // ********************
   void setAudioVector(AudioVector& v);
   void setTID(ClientTID tid);
+  void setOwner(ClientToken t);
   // ********************
   int addReadPermission(ClientToken t);
   int removeReadPermission(ClientToken t);
@@ -26,6 +29,7 @@ private:
   AudioVector myVect;
   ClientTID myTID;
   ReadLogger myLog;
+    ClientToken myOwner;
 };
 
 #endif

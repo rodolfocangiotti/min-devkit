@@ -5,6 +5,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include "AudioVector.h"
 #include "StreamQueue.h"
 #include "UDPDatagram.h"
 #include "types.h"
@@ -18,7 +19,7 @@
 
 class UDPConnection {
 public:
-  UDPConnection(StreamQueue& sq);
+  UDPConnection(StreamQueue& inSq, StreamQueue& outSq);
   ~UDPConnection();
   // ********************
   void configure(Address a, PortNum p);
@@ -32,6 +33,7 @@ private:
   void initServerAddress(Address a, PortNum p);
   //void setToken(ClientToken t);
   void listen();
+    void asyncSendStream();
   int send(const void* buff, size_t s);
   int receive(void* buff, size_t s);
   int receiveWithTimeout(fd_set* fds, void* buff, size_t s);
@@ -45,15 +47,18 @@ private:
   struct timeval myTimeout;
   // ********************
   UDPDatagram myInDatagram, myOutDatagram;
-  StreamQueue& myStreamQueue;
+  StreamQueue& myInStreamQueue;
+  StreamQueue& myOutStreamQueue;
   //ClientTID myLastRqst; // Last TID used for requests to server...
   //ClientToken myToken;
   // ********************
   bool active;
   std::mutex myMutex;
-  std::thread myThread;
+  std::thread myInThread;
+    std::thread myOutThread;
 };
 
 //void clearVector(AudioVector& v);
+void logComp(uint64_t comp);
 
 #endif
