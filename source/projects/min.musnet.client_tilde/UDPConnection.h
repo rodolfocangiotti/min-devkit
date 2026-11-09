@@ -33,7 +33,7 @@ private:
   void initServerAddress(Address a, PortNum p);
   //void setToken(ClientToken t);
   void listen();
-    void asyncSendStream();
+  void asyncSendStream();
   int send(const void* buff, size_t s);
   int receive(void* buff, size_t s);
   int receiveWithTimeout(fd_set* fds, void* buff, size_t s);
@@ -55,7 +55,7 @@ private:
   bool active;
   std::mutex myMutex;
   std::thread myInThread;
-    std::thread myOutThread;
+  std::thread myOutThread;
 };
 
 //void clearVector(AudioVector& v);

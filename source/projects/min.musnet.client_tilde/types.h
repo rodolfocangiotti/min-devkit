@@ -18,4 +18,10 @@ typedef uint16_t PortNum;
 typedef int SocketFD;
 typedef std::string Address;
 
+typedef std::chrono::nanoseconds Nanoseconds;
+typedef std::chrono::system_clock SystemClock;
+typedef std::chrono::high_resolution_clock HighResolutionClock;
+typedef std::chrono::time_point<SystemClock> SystemTime;
+typedef std::chrono::time_point<HighResolutionClock> HighResolutionTime;
+
 #endif

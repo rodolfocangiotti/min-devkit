@@ -3,6 +3,7 @@
 
 #include <map>
 #include "AudioVector.h"
+#include "commons.h"
 #include "types.h"
 
 class StreamVector {
@@ -11,11 +12,15 @@ public:
   ~StreamVector();
   // ********************
   ClientTID tid() const;
-    ClientToken owner() const;
+  ClientToken owner() const;
   // ********************
-  void setAudioVector(AudioVector& v);
+  void setAudioVector(const AudioVector& v);
   void setTID(ClientTID tid);
   void setOwner(ClientToken t);
+  void setCreationTimestamp();
+  SystemTime getCreationTimestamp() const;
+  void set_flag(Flag f);
+  Flag get_flag() const;
   // ********************
   int addReadPermission(ClientToken t);
   int removeReadPermission(ClientToken t);
@@ -29,7 +34,9 @@ private:
   AudioVector myVect;
   ClientTID myTID;
   ReadLogger myLog;
-    ClientToken myOwner;
+  ClientToken myOwner;
+  SystemTime creation_time;
+  Flag _flag;
 };
 
 #endif

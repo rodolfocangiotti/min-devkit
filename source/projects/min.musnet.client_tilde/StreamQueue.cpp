@@ -84,9 +84,17 @@ AudioVector StreamQueue::retrieveVector(ClientToken t, bool readAlways) {
   {
     // Critical section...
     std::lock_guard<std::mutex> l(myMutex);
+    
+    static int i = 0;
+    if (!(++i % 10)) {
+      std::cout << "Current queue size: " << myQueue.size() << '\n';
+      i = 0;
+    }
+    
     if (!(myCanReadQueue)) { // Add limits to queue read in order to reduce artefact frequency...
-//      if (myQueue.size() >= MIN_QUEUE_LENGTH) {
-      if (myQueue.size() >= myMaxLen / 2) {
+      // if (myQueue.size() >= MIN_QUEUE_LENGTH) {
+      // if (myQueue.size() >= myMaxLen / 2) {
+      if (myQueue.size() >= myMaxLen) { // In this way, it is actually becoming a minimum queue length...
         myCanReadQueue = true;
       }
     } else {
@@ -96,38 +104,75 @@ AudioVector StreamQueue::retrieveVector(ClientToken t, bool readAlways) {
       }
     }
     if (myCanReadQueue || readAlways) {  // Read queue if the above policies allow this...
-        myQueue.sort(comp);
+        // myQueue.sort(comp); # TODO
+        /*
         while (myQueue.size() > myMaxLen) {
           myQueue.pop_front();
         }
+        */
       sv = myQueue.front();
       retrieved = true;
       myQueue.pop_front();
-#if defined(DEBUG) && VERBOSENESS > 2
-      std::cout << "Current queue size: " << myQueue.size() << '\n';
-#endif
     }
   }
   if (!(retrieved)) {
-    std::cerr << RED << "[ERROR] No readable vectors on queue (queue is empty or haven't reached the reading threshold)!" << RESET << '\n';
+    // std::cerr << RED << "[ERROR] No readable vectors on queue (queue is empty or haven't reached the reading threshold)!" << RESET << '\n';
     return v;
   }
   v = sv.readVector(t);
   return v;
 }
 
-int StreamQueue::retrieveVector(StreamVector& res) {
-    // Critical section...
-    std::lock_guard<std::mutex> l(myMutex); // XXX MUTEX WAS MISSING, BUT ON MACOS NOTHING HAPPENED...
-    // ON LINUX, INSTEAD, SEGMENTATION FAULT AFTER SOME SECS...
-    if (myQueue.size()) {
-        res = myQueue.front();
-        myQueue.pop_front();
-        return 0;
+int StreamQueue::retrieveVector(StreamVector& res, bool debug) {
+    SystemTime t0, t1, t2;
+    if (debug) {
+        t0 = SystemClock::now();
     }
-    return -1;
+    int res_code = 1;
+    {
+        // Critical section...
+        std::lock_guard<std::mutex> l(myMutex); // XXX MUTEX WAS MISSING, BUT ON MACOS NOTHING HAPPENED...
+        // ON LINUX, INSTEAD, SEGMENTATION FAULT AFTER SOME SECS...
+        if (debug) {
+            t1 = SystemClock::now();
+            std::cout << "Queue size: " << myQueue.size() << std::endl;
+        }
+        if (myQueue.size()) {
+            res = myQueue.front();
+            myQueue.pop_front();
+            res_code = 0;
+        }
+    }
+    if (debug) {
+        t2 = SystemClock::now();
+        double t0_t1 = std::chrono::duration_cast<Nanoseconds>(t1.time_since_epoch() - t0.time_since_epoch()).count() * 1e-6;
+        double t1_t2 = std::chrono::duration_cast<Nanoseconds>(t2.time_since_epoch() - t1.time_since_epoch()).count() * 1e-6;
+        std::cout << std::fixed;
+        std::cout << "t0 -> t1: " << t0_t1 << " -- t1 -> t2: " << t1_t2 << std::endl;
+    }
+    return res_code;
+}
+
+std::vector<StreamVector> StreamQueue::retrieveAllVectors() {
+    // Critical section...
+    std::lock_guard<std::mutex> l(myMutex);
+    std::vector<StreamVector> queue_segment;
+    while (myQueue.size()) {
+        StreamVector& sv = myQueue.front();
+        queue_segment.push_back(sv);
+        myQueue.pop_front();
+    }
+    return queue_segment;
 }
 
 void StreamQueue::setMaxLength(int elems) {
     myMaxLen = elems;
+}
+
+std::mutex& StreamQueue::referMutex() {
+  return myMutex;
+}
+
+void StreamQueue::clear() {
+    myQueue.clear();
 }

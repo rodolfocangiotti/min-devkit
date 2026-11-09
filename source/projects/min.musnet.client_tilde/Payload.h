@@ -11,7 +11,7 @@ public:
   typedef uint16_t MaxSize;
   typedef uint16_t Size;
   // ********************
-  Payload(MaxSize ms);
+  Payload(const MaxSize ms);
   ~Payload();
   // ********************
   const Buffer& buffer() const;

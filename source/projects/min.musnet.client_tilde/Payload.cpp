@@ -2,9 +2,9 @@
 #include "Payload.h"
 #include "commons.h"
 
-// TODO Check if it should be better to compact the code, avoting repetition...
+// TODO Check if it should be better to compact the code, avoiding repetition...
 
-Payload::Payload(MaxSize ms):
+Payload::Payload(const MaxSize ms):
   myBuff(ms, 0),
   mySize(0) {
 #if defined(DEBUG) && VERBOSENESS > 2

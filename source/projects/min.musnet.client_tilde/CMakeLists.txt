@@ -19,12 +19,18 @@ include_directories(
 
 set( SOURCE_FILES
     ${PROJECT_NAME}.cpp
+    AudioMultichannel.cpp
+    AudioMultichannel.h
     AudioVector.cpp
     AudioVector.h
     Payload.cpp
     Payload.h
+    Profiler.cpp
+    Profiler.h
     StreamManager.cpp
     StreamManager.h
+    StreamPayload.cpp
+    StreamPayload.h
     StreamQueue.cpp
     StreamQueue.h
     StreamVector.cpp

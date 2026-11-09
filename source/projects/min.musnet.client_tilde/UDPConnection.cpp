@@ -1,6 +1,7 @@
 #include <cassert>
 #include <cmath>
 #include <iostream>
+#include "Profiler.h"
 #include "UDPConnection.h"
 #include "prettyprint.h"
 
@@ -13,10 +14,7 @@ UDPConnection::UDPConnection(StreamQueue& inSq, StreamQueue& outSq):
   myAddrss(), servAddrss(),
   myAddrssLen(0), servAddrssLen(0),
   myInDatagram(UDP_BUFFER_SIZE), myOutDatagram(UDP_BUFFER_SIZE),
-  myInStreamQueue(inSq),
-    myOutStreamQueue(outSq),
-  //myLastRqst(0),
-  //myToken(0),
+  myInStreamQueue(inSq), myOutStreamQueue(outSq),
   active(false),
   myMutex(),
   myInThread(), myOutThread() {
@@ -138,6 +136,7 @@ void UDPConnection::listen() {
       continue;
     }
 
+      Profiler::add_record(myInDatagram.token(), myInDatagram.tid(), Profiler::OperationID::UDP_RECEIPT);
 #if defined(DEBUG) && VERBOSENESS > 2
     std::cout << "[DEBUG] Datagram received!" << '\n';
 #endif
@@ -151,6 +150,7 @@ void UDPConnection::listen() {
       sv.setTID(respTID);
     assert(fromServ.size() == AUDIO_VECTOR_SIZE * NUM_CHANNELS);
     myOutStreamQueue.insertVector(t, sv);
+  Profiler::add_record(t, respTID, Profiler::OperationID::RESPONSE_PENDING);
     currSet = nextSet;
   }
 }
@@ -158,9 +158,11 @@ void UDPConnection::listen() {
 void UDPConnection::startListen() {
   std::lock_guard<std::mutex> l(myMutex);
   if (!(active)) {
+    active = true;
+    // Check TCP connection for similar comments...
+    // TODO
     myInThread = std::thread(&UDPConnection::asyncSendStream, this);
     myOutThread = std::thread(&UDPConnection::listen, this);
-    active = true;
   }
 }
 
@@ -178,9 +180,9 @@ void UDPConnection::stopListen() {
     if (myInThread.joinable()) {
       myInThread.join();
     }
-      if (myOutThread.joinable()) {
-          myOutThread.join();
-      }
+    if (myOutThread.joinable()) {
+      myOutThread.join();
+    }
   }
   std::cout << "Listen stopped!" << '\n'; 
 }
@@ -194,25 +196,30 @@ AudioVector UDPConnection::retrieveStream() {
 
 void UDPConnection::asyncSendStream() {
     StreamVector sv;
-    double secSleep = static_cast<double>(AUDIO_VECTOR_SIZE) / REDUNDANCY / AUDIO_SAMPLE_RATE;
-    uint64_t usecsSleep = secSleep * 0.75 * 1e6;
+    // double secSleep = static_cast<double>(AUDIO_VECTOR_SIZE) / REDUNDANCY / AUDIO_SAMPLE_RATE;
+    // uint64_t usecsSleep = secSleep * 0.75 * 1e6;
 
-    uint64_t t0 = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-    uint64_t tExpect = t0 + usecsSleep;
-    uint64_t usecsComp = 0;
+    // uint64_t t0 = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+    // uint64_t tExpect = t0 + usecsSleep;
+    // uint64_t usecsComp = 0;
     while (listening()) {
-        int res = myInStreamQueue.retrieveVector(sv);
-        if (!(res)) {
-            ClientToken t = sv.owner();
-            ClientTID tid = sv.tid();
-            AudioVector v = sv.readVector(t);
+        // int res = myInStreamQueue.retrieveVector(sv);
+        // if (!(res)) {
+        std::vector<StreamVector> from_queue = myInStreamQueue.retrieveAllVectors();
+        for (std::vector<StreamVector>::iterator it = from_queue.begin(); it != from_queue.end(); it++) {
+            // it is iterating StreamVector...
+            Profiler::add_record(it->owner(), it->tid(), Profiler::OperationID::REQUEST_START);
+            ClientToken t = it->owner();
+            ClientTID tid = it->tid();
+            AudioVector v = it->readVector(t);
             sendStream(t, tid, v);
+            Profiler::add_record(t, tid, Profiler::OperationID::UDP_DISPATCH);
         }
-        std::this_thread::sleep_for(std::chrono::microseconds(usecsSleep - usecsComp));
-        uint64_t t = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-        usecsComp = t - tExpect;
+        // std::this_thread::sleep_for(std::chrono::microseconds(usecsSleep - usecsComp));
+        // uint64_t t = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+        // usecsComp = t - tExpect;
 //        logComp(usecsComp);
-        tExpect += usecsSleep;
+        // tExpect += usecsSleep;
         // XXX POSSIBILE CHE A DSP SIZE PIU' ALTE CI SIANO INTERRUZIONI AUDIO PERCHE' I PACCHETTI NON VENGONO INVIATI AD UN RATE COSTANTE E QUINDI SI CREANO DISALLINEAMENTI A LATO SERVER...
         // RIPRISTINATO IL TIME SLEEP CON TANTO DI CORREZIONE SHIFT...
     }
@@ -220,7 +227,7 @@ void UDPConnection::asyncSendStream() {
 
 int UDPConnection::sendStream(ClientToken t, ClientTID tid, AudioVector &v) {
   assert(v.size() == AUDIO_VECTOR_SIZE * NUM_CHANNELS);
-  myOutDatagram.buildAudioStream(v, t, tid);
+  myOutDatagram.buildAudioStream(t, tid, v);
   return send(myOutDatagram.rawBuffer(), UDP_BUFFER_SIZE);
 }
 

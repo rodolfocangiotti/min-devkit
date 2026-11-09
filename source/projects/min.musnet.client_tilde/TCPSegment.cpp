@@ -3,8 +3,8 @@
 #include "TCPSegment.h"
 #include "commons.h"
 
-TCPSegment::TCPSegment(MaxSize ms):
-  Payload(ms) {
+TCPSegment::TCPSegment(const MaxSize ms):
+  StreamPayload(ms) {
 #if defined(DEBUG) && VERBOSENESS > 2
   std::cout << "[DEBUG] Constructing TCPSegment class..." << '\n';
 #endif
@@ -16,12 +16,6 @@ TCPSegment::~TCPSegment() {
 #endif
 }
 
-ClientToken TCPSegment::token() const {
-  const Byte* bp = &(myBuff[1]);
-  const ClientToken* tp = reinterpret_cast<const ClientToken*>(bp);
-  return *tp;
-}
-
 void TCPSegment::buildEntryRequest() {
   mySize = sizeof (Header);
   assert(mySize <= myBuff.size());
@@ -30,18 +24,18 @@ void TCPSegment::buildEntryRequest() {
   *hp = ENTRY_REQUEST;
 }
 
-void TCPSegment::buildEntryResponse(ClientToken t) {
+void TCPSegment::buildEntryResponse(const ClientToken t) {
   mySize = sizeof (Header) + sizeof (ClientToken);
   assert(mySize <= myBuff.size());
   Byte* bp = &(myBuff[0]);
   Header* hp = reinterpret_cast<Header*>(bp);
-  *hp = OKAY;
+  *hp = OKAY_RESPONSE;
   bp = &(myBuff[1]);
   ClientToken* tp = reinterpret_cast<ClientToken*>(bp);
   *tp = t;
 }
 
-void TCPSegment::buildExitRequest(ClientToken t) {
+void TCPSegment::buildExitRequest(const ClientToken t) {
   mySize = sizeof (Header) + sizeof (ClientToken);
   assert(mySize <= myBuff.size());
   Byte* bp = &(myBuff[0]);
@@ -57,5 +51,5 @@ void TCPSegment::buildExitResponse() {
   assert(mySize <= myBuff.size());
   Byte* bp = &(myBuff[0]);
   Header* hp = reinterpret_cast<Header*>(bp);
-  *hp = OKAY;
+  *hp = OKAY_RESPONSE;
 }
