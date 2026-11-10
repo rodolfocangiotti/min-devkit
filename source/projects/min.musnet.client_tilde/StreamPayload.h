@@ -10,7 +10,7 @@
 class StreamPayload: public Payload {
 public:
   typedef uint8_t Mode;
-  typedef uint16_t StreamSize;
+  typedef uint32_t StreamSize;
   typedef uint8_t Flag;
   // ********************
   StreamPayload(const MaxSize ms);
